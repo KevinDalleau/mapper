@@ -31,7 +31,7 @@ public class Mapper implements Serializable {
 	private HashMap<String, ArrayList<String>> pharmgkb_to_stitch;
 	
 	public String getUMLS_from_PharmGKB(String pharmgkb) {
-		return null;
+		return this.getPharmgkb_to_umlsid().get(pharmgkb);
 	}
 	public String getPharmGKB_from_UMLS(String umls) {
 		return this.getUmlsid_to_pharmgkb().get(umls);
@@ -208,7 +208,7 @@ public class Mapper implements Serializable {
 		return PharmGKBToUmlsMappings;
 	}
 
-	private HashMap<String, String> getUmlsid_to_pharmgkb() {
+	public HashMap<String, String> getUmlsid_to_pharmgkb() {
 		return umlsid_to_pharmgkb;
 	}
 

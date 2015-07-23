@@ -26,9 +26,13 @@ import com.hp.hpl.jena.sparql.engine.http.QueryEngineHTTP;
 public class Mapper implements Serializable {
 
 	private static final long serialVersionUID = 1234;
+	private HashMap<String, String> pharmgkb_to_umlsid;
 	private HashMap<String, String> umlsid_to_pharmgkb;
 	private HashMap<String, ArrayList<String>> pharmgkb_to_stitch;
 	
+	public String getUMLS_from_PharmGKB(String pharmgkb) {
+		return null;
+	}
 	public String getPharmGKB_from_UMLS(String umls) {
 		return this.getUmlsid_to_pharmgkb().get(umls);
 	}
@@ -38,11 +42,38 @@ public class Mapper implements Serializable {
 	}
 	
 	public Mapper() {
+		this.pharmgkb_to_umlsid = new HashMap<String, String>();
 		this.umlsid_to_pharmgkb = new HashMap<String,String>();
 		this.pharmgkb_to_stitch = new HashMap<String, ArrayList<String>>();
-		
+				
+		File file_pharmgkb_to_umls = new File("./pharmgkb_to_umlsid.ser");
 		File file_umls_to_pharmgkb = new File("./umlsid_to_pharmgkb.ser");
 		File file_pharmgkb_to_stitch = new File("./pharmgkb_to_stitch.ser");
+		
+		if(file_pharmgkb_to_umls.exists()) {
+			
+			try {
+				ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file_pharmgkb_to_umls));
+				try {
+					this.pharmgkb_to_umlsid = (HashMap<String, String>) ois.readObject();
+				} catch (ClassNotFoundException e) {
+					e.printStackTrace();
+				}
+
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		else {
+			this.pharmgkb_to_umlsid = getPharmGKBToUMLS();
+			try {
+				ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file_pharmgkb_to_umls));
+				oos.writeObject(pharmgkb_to_umlsid);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 		
 		if(file_umls_to_pharmgkb.exists()) {
 			
@@ -153,6 +184,29 @@ public class Mapper implements Serializable {
 		}
 		return umlsToPharmGKBMappings;
 	}
+	
+	private static HashMap<String,String> getPharmGKBToUMLS() {
+		HashMap<String,String> PharmGKBToUmlsMappings = new HashMap<String, String>();
+		String query = "SELECT ?umls_id ?pharmgkb_id\n" + 
+				"				WHERE {\n" + 
+				"				?pharmgkb_id_uri <http://biodb.jp/mappings/to_umls_id> ?umls_id_uri. \n" + 
+				"				FILTER regex(str(?umls_id_uri), \"^http://biodb.jp/mappings/umls_id/\")\n" + 
+				"				  BIND(REPLACE(str(?umls_id_uri), \"http://biodb.jp/mappings/umls_id/\",\"\") AS ?umls_id)\n" + 
+				"				  BIND(REPLACE(str(?pharmgkb_id_uri), \"http://biodb.jp/mappings/pharmgkb_id/\",\"\") AS ?pharmgkb_id)\n" + 
+				"				}";
+		
+		QueryEngineHTTP queryExec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService("http://cassandra.kevindalleau.fr/mappings/sparql", query);
+		queryExec.addParam("timeout","3600000");
+		ResultSet results = queryExec.execSelect();
+		
+		while(results.hasNext()) {
+			QuerySolution solution = results.nextSolution();
+			RDFNode umlsNode = solution.get("umls_id");
+			RDFNode pharmGKBNode = solution.get("pharmgkb_id");
+			PharmGKBToUmlsMappings.put(pharmGKBNode.toString(),umlsNode.toString());	
+		}
+		return PharmGKBToUmlsMappings;
+	}
 
 	private HashMap<String, String> getUmlsid_to_pharmgkb() {
 		return umlsid_to_pharmgkb;
@@ -164,6 +218,18 @@ public class Mapper implements Serializable {
 
 	private ArrayList<String> getPharmgkb_to_stitch(String pharmgkb) {
 		return pharmgkb_to_stitch.get(pharmgkb);
+	}
+	public HashMap<String, String> getPharmgkb_to_umlsid() {
+		return pharmgkb_to_umlsid;
+	}
+	public void setPharmgkb_to_umlsid(HashMap<String, String> pharmgkb_to_umlsid) {
+		this.pharmgkb_to_umlsid = pharmgkb_to_umlsid;
+	}
+	public HashMap<String, ArrayList<String>> getPharmgkb_to_stitch() {
+		return pharmgkb_to_stitch;
+	}
+	public void setPharmgkb_to_stitch(HashMap<String, ArrayList<String>> pharmgkb_to_stitch) {
+		this.pharmgkb_to_stitch = pharmgkb_to_stitch;
 	}
 
 	

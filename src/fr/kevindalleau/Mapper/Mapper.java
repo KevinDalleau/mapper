@@ -30,6 +30,7 @@ public class Mapper implements Serializable {
 	private HashMap<String, String> umlsid_to_pharmgkb;
 	private HashMap<String, ArrayList<String>> pharmgkb_to_stitch;
 	private HashMap<String, String> pharmgkb_to_drugbank;
+	private HashMap<String, String> pharmgkb_to_uniprot;
 	
 	public String getUMLS_from_PharmGKB(String pharmgkb) {
 		return this.getPharmgkb_to_umlsid().get(pharmgkb);
@@ -40,6 +41,10 @@ public class Mapper implements Serializable {
 	
 	public String getDrugbank_from_PharmGKB(String pharmgkb) {
 		return this.getPharmGKBToDrugBank().get(pharmgkb);
+	}
+	
+	public String getUniProt_from_PharmGKB(String uniprot) {
+		return this.getPharmGKBToUniProt().get(uniprot);
 	}
 	
 	public ArrayList<String> getStitch_from_PharmGKB(String pharmgkb) {
@@ -214,6 +219,31 @@ public class Mapper implements Serializable {
 		return PharmGKBtoDrugBankMappings;
 	}
 	
+	private HashMap<String,String> getPharmGKBToUniProt() {
+		HashMap<String,String> PharmGKBToUniProtMappings = new HashMap<String, String>();
+		String query = "PREFIX http: <http://www.w3.org/2011/http#>\n" + 
+				"prefix owl: <http://www.w3.org/2002/07/owl#>\n" + 
+				"prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" + 
+				"SELECT DISTINCT ?pharmgkb_id ?uniprot_id\n" + 
+				"WHERE {\n" + 
+				"?pharmgkb_uri <http://biodb.jp/mappings/to_uniprot_id> ?uniprot_uri.\n" + 
+				"BIND(REPLACE(str(?pharmgkb_uri), \"http://biodb.jp/mappings/pharmgkb_id/\",\"\") AS ?pharmgkb_id)\n" + 
+				"BIND(REPLACE(str(?uniprot_uri), \"http://biodb.jp/mappings/uniprot_id/\",\"\") AS ?uniprot_id)\n" + 
+				"}";
+		
+		QueryEngineHTTP queryExec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService("http://cassandra.kevindalleau.fr/mappings/sparql", query);
+		queryExec.addParam("timeout","3600000");
+		ResultSet results = queryExec.execSelect();
+		
+		while(results.hasNext()) {
+			QuerySolution solution = results.nextSolution();
+			RDFNode uniProtNode = solution.get("uniprot_id");
+			RDFNode pharmGKBNode = solution.get("pharmgkb_id");
+			PharmGKBToUniProtMappings.put(pharmGKBNode.toString(),uniProtNode.toString());	
+		}
+		return PharmGKBToUniProtMappings;
+	}
+	
 	private static HashMap<String,String> getPharmGKBToUMLS() {
 		HashMap<String,String> PharmGKBToUmlsMappings = new HashMap<String, String>();
 		String query = "SELECT ?umls_id ?pharmgkb_id\n" + 
@@ -265,6 +295,12 @@ public class Mapper implements Serializable {
 	}
 	public void setPharmgkb_to_drugbank(HashMap<String, String> pharmgkb_to_drugbank) {
 		this.pharmgkb_to_drugbank = pharmgkb_to_drugbank;
+	}
+	public HashMap<String, String> getPharmgkb_to_uniprot() {
+		return pharmgkb_to_uniprot;
+	}
+	public void setPharmgkb_to_uniprot(HashMap<String, String> pharmgkb_to_uniprot) {
+		this.pharmgkb_to_uniprot = pharmgkb_to_uniprot;
 	}
 
 	
